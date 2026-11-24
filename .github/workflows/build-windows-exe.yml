@@ -13,6 +13,9 @@ jobs:
   build-windows:
     runs-on: windows-latest
     timeout-minutes: 45
+    env:
+      # Use ANGLE's Direct3D-backed OpenGL implementation on headless CI.
+      KIVY_GL_BACKEND: angle_sdl2
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -27,6 +30,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install "kivy[base]==2.3.1" openpyxl reportlab pyinstaller
+
+      - name: Verify Kivy graphics backend
+        run: |
+          python -c "import os; print('KIVY_GL_BACKEND=', os.environ.get('KIVY_GL_BACKEND')); import kivy; print('Kivy', kivy.__version__)"
 
       - name: Build Windows application
         run: |
