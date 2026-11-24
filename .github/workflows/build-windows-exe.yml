@@ -30,7 +30,7 @@ jobs:
 
       - name: Build Windows application
         run: |
-          pyinstaller --noconfirm --clean --windowed --onedir --name BuildingManager --collect-all kivy --collect-all kivy_deps.sdl2 --collect-all kivy_deps.glew --collect-all kivy_deps.angle --collect-all openpyxl --collect-all reportlab main.py
+          pyinstaller --noconfirm --clean --windowed --onedir --name BuildingManager --collect-data kivy --collect-binaries kivy --hidden-import kivy.core.window._window_sdl2 --hidden-import kivy.core.text --hidden-import kivy.core.text.text_sdl2 --hidden-import openpyxl --hidden-import reportlab main.py
 
       - name: Package application
         shell: pwsh
