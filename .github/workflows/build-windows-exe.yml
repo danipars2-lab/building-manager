@@ -6,6 +6,7 @@ on:
     branches: [ main, master ]
     paths:
       - 'main.py'
+      - 'fonts/Vazirmatn-Regular.ttf.b64'
       - 'requirements.txt'
       - '.github/workflows/build-windows-exe.yml'
 
@@ -35,9 +36,16 @@ jobs:
         run: |
           python -c "import os; print('KIVY_GL_BACKEND=', os.environ.get('KIVY_GL_BACKEND')); import kivy; print('Kivy', kivy.__version__)"
 
+      - name: Restore Persian font
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path fonts | Out-Null
+          $font = [Convert]::FromBase64String((Get-Content fonts/Vazirmatn-Regular.ttf.b64 -Raw))
+          [IO.File]::WriteAllBytes('fonts/Vazirmatn-Regular.ttf', $font)
+
       - name: Build Windows application
         run: |
-          pyinstaller --noconfirm --clean --windowed --onedir --name BuildingManager --collect-data kivy --collect-binaries kivy --hidden-import kivy.core.window._window_sdl2 --hidden-import kivy.core.text --hidden-import kivy.core.text.text_sdl2 --hidden-import openpyxl --hidden-import reportlab main.py
+          pyinstaller --noconfirm --clean --windowed --onedir --name BuildingManager --add-data "fonts/Vazirmatn-Regular.ttf;fonts" --collect-data kivy --collect-binaries kivy --hidden-import kivy.core.window._window_sdl2 --hidden-import kivy.core.text --hidden-import kivy.core.text.text_sdl2 --hidden-import openpyxl --hidden-import reportlab main.py
 
       - name: Package application
         shell: pwsh
