@@ -5,12 +5,13 @@ package.domain = org.example
 source.dir = .
 source.include_exts = py,kv,png,jpg,atlas,ttf,db
 version = 0.1.0
-requirements = python3,kivy,openpyxl
+requirements = python3==3.12.10,hostpython3==3.12.10,kivy,openpyxl
 orientation = portrait
 fullscreen = 0
 android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
 android.api = 33
 android.minapi = 24
+p4a.branch = master
 android.archs = arm64-v8a, armeabi-v7a
 android.accept_sdk_license = True
 [buildozer]
