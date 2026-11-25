@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """مدیریت هوشمند ساختمان - نسخه پایه قابل اجرا با Kivy و SQLite"""
-import os, sqlite3, datetime, shutil
+import os, sys, sqlite3, datetime, shutil
 from decimal import Decimal, InvalidOperation
 from kivy.app import App
 from kivy.lang import Builder
@@ -9,6 +9,7 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.properties import StringProperty, ListProperty
 from kivy.clock import Clock
 from kivy.utils import platform
+from kivy.core.text import LabelBase
 
 APP_TITLE = "مدیریت هوشمند ساختمان"
 DB_NAME = "building_manager.db"
