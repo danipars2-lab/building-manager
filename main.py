@@ -16,6 +16,12 @@ DB_NAME = "building_manager.db"
 
 KV = r"""
 #:import dp kivy.metrics.dp
+<Label>:
+    font_name: "Persian"
+<Button>:
+    font_name: "Persian"
+<TextInput>:
+    font_name: "Persian"
 <MainScreen>:
     BoxLayout:
         orientation: "vertical"
@@ -479,6 +485,11 @@ class RootManager(ScreenManager):
 class BuildingManagerApp(App):
     def build(self):
         os.makedirs(self.user_data_dir,exist_ok=True)
+        base_dir = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+        font_path = os.path.join(base_dir, "fonts", "Vazirmatn-Regular.ttf")
+        if not os.path.isfile(font_path):
+            raise FileNotFoundError("فونت فارسی برنامه پیدا نشد: " + font_path)
+        LabelBase.register(name="Persian", fn_regular=font_path, fn_bold=font_path, fn_italic=font_path, fn_bolditalic=font_path)
         dbpath=os.path.join(self.user_data_dir,DB_NAME)
         self.db=DB(dbpath)
         Builder.load_string(KV)
