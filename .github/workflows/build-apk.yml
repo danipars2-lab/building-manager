@@ -34,11 +34,9 @@ jobs:
 
       - name: Install Python build tools
         run: |
-          python -m venv .venv
-          . .venv/bin/activate
-          python -m pip install --upgrade pip setuptools wheel
-          python -m pip install "Cython==0.29.36" buildozer
-          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+          python -m pip install --upgrade --user pip setuptools wheel
+          python -m pip install --user "Cython==0.29.36" buildozer
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Verify Android build toolchain
         run: |
