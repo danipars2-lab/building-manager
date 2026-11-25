@@ -8,7 +8,7 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-22.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -19,18 +19,31 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            git zip unzip openjdk-17-jdk python3-pip python3-venv \
-            build-essential ccache libffi-dev libssl-dev zlib1g-dev \
+            git zip unzip build-essential ccache libffi-dev libssl-dev zlib1g-dev \
             libncurses5-dev libncursesw5-dev libtinfo5 cmake
 
       - name: Install Python build tools
         run: |
-          python3 -m pip install --upgrade pip setuptools wheel
-          python3 -m pip install "Cython==0.29.36" buildozer
+          python -m venv .venv
+          . .venv/bin/activate
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install "Cython==0.29.36" buildozer
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Android build toolchain
+        run: |
+          python --version
+          buildozer --version
 
       - name: Build debug APK
         run: buildozer -v android debug
