@@ -10,6 +10,10 @@ from kivy.properties import StringProperty, ListProperty
 from kivy.clock import Clock
 from kivy.utils import platform
 from kivy.core.text import LabelBase
+from kivy.config import Config
+Config.set('graphics', 'multisamples', '0')
+Config.set('graphics', 'maxfps', '30')
+Config.set('graphics', 'vsync', '0')
 
 APP_TITLE = "مدیریت هوشمند ساختمان"
 DB_NAME = "building_manager.db"
@@ -17,11 +21,13 @@ DB_NAME = "building_manager.db"
 KV = r"""
 #:import dp kivy.metrics.dp
 <Label>:
-    font_name: "Persian"
+    font_name: app.selected_font
 <Button>:
-    font_name: "Persian"
+    font_name: app.selected_font
 <TextInput>:
-    font_name: "Persian"
+    font_name: app.selected_font
+<Spinner>:
+    font_name: app.selected_font
 <MainScreen>:
     BoxLayout:
         orientation: "vertical"
@@ -85,6 +91,9 @@ KV = r"""
             Button:
                 text: "پشتیبان‌گیری"
                 on_release: root.backup()
+            Button:
+                text: "تنظیمات و انتخاب فونت"
+                on_release: root.manager.current = "settings"
         Label:
             text: root.status
             size_hint_y: None
@@ -311,6 +320,43 @@ KV = r"""
             size_hint_y: None
             height: dp(44)
             on_release: root.manager.current = "home"
+<SettingsScreen>:
+    BoxLayout:
+        orientation: "vertical"
+        padding: dp(12)
+        spacing: dp(10)
+        Label:
+            text: "تنظیمات نمایش و فونت"
+            size_hint_y: None
+            height: dp(46)
+            bold: True
+        Label:
+            text: "فونت فارسی"
+            size_hint_y: None
+            height: dp(34)
+        Spinner:
+            id: font_picker
+            text: app.selected_font_label
+            values: ["Vazirmatn (پیش‌فرض)", "B Nazanin", "B Yagut", "B Koodak", "B Traffic"]
+            size_hint_y: None
+            height: dp(48)
+            on_text: root.choose_font(self.text)
+        Label:
+            text: root.font_status
+            text_size: self.width, None
+            halign: "center"
+            size_hint_y: None
+            height: dp(70)
+        Label:
+            text: "برای استفاده از فونت‌های سری B، باید نسخه مجاز آن‌ها روی ویندوز نصب باشد."
+            text_size: self.width, None
+            halign: "center"
+        Button:
+            text: "بازگشت"
+            size_hint_y: None
+            height: dp(46)
+            on_release: root.manager.current = "home"
+
 """
 
 def money(v):
@@ -479,10 +525,79 @@ class ReportsScreen(Screen):
             c.save(); self.report_text += "\\n\\nفایل PDF ذخیره شد: "+path+" (نسخه پایه؛ برای نمایش صحیح فارسی باید فونت فارسی در بسته نهایی افزوده شود.)"
         except Exception as e: self.report_text += "\\nخطا در PDF: "+str(e)
 
+class SettingsScreen(Screen):
+    font_status = StringProperty("فونت پیش‌فرض فعال است.")
+    def choose_font(self, label):
+        app = App.get_running_app()
+        try:
+            if label == "Vazirmatn (پیش‌فرض)":
+                app.selected_font = "Persian"
+                app.selected_font_label = label
+                self.font_status = "فونت پیش‌فرض فعال شد."
+                app.save_font_preference(label)
+                return
+            path = app.find_windows_font(label)
+            if not path:
+                self.font_status = "این فونت روی ویندوز نصب نیست. ابتدا نسخه مجاز فونت را نصب کنید."
+                return
+            LabelBase.register(name=label, fn_regular=path, fn_bold=path, fn_italic=path, fn_bolditalic=path)
+            app.selected_font = label
+            app.selected_font_label = label
+            app.save_font_preference(label)
+            self.font_status = "فونت " + label + " فعال شد."
+        except Exception as exc:
+            self.font_status = "امکان فعال‌سازی فونت وجود ندارد: " + str(exc)
+
 class RootManager(ScreenManager):
     db=None
 
 class BuildingManagerApp(App):
+    selected_font = StringProperty("Persian")
+    selected_font_label = StringProperty("Vazirmatn (پیش‌فرض)")
+
+    def save_font_preference(self, label):
+        try:
+            import json
+            path = os.path.join(self.user_data_dir, "settings.json")
+            with open(path, "w", encoding="utf-8") as stream:
+                json.dump({"font": label}, stream, ensure_ascii=False)
+        except Exception:
+            pass
+
+    def find_windows_font(self, family):
+        if platform != "win":
+            return None
+        import winreg
+        candidates = {
+            "B Nazanin": ("B Nazanin", "BNazanin.ttf", "B Nazanin (TrueType)"),
+            "B Yagut": ("B Yagut", "BYagut.ttf", "B Yagut (TrueType)"),
+            "B Koodak": ("B Koodak", "BKoodakBold.ttf", "B Koodak (TrueType)"),
+            "B Traffic": ("B Traffic", "BTraffic.ttf", "B Traffic (TrueType)")
+        }
+        keys = [
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts"),
+            (winreg.HKEY_CURRENT_USER, r"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts")
+        ]
+        names = candidates.get(family, ())
+        for hive, key in keys:
+            try:
+                with winreg.OpenKey(hive, key) as handle:
+                    count = winreg.QueryInfoKey(handle)[1]
+                    for index in range(count):
+                        name, value, _ = winreg.EnumValue(handle, index)
+                        if any(token.lower() in name.lower() for token in names):
+                            path = value if os.path.isabs(value) else os.path.join(os.environ.get("WINDIR", r"C:\\Windows"), "Fonts", value)
+                            if os.path.isfile(path):
+                                return path
+            except OSError:
+                continue
+        fonts_dir = os.path.join(os.environ.get("WINDIR", r"C:\\Windows"), "Fonts")
+        for filename in names:
+            path = os.path.join(fonts_dir, filename)
+            if os.path.isfile(path):
+                return path
+        return None
+
     def build(self):
         os.makedirs(self.user_data_dir,exist_ok=True)
         base_dir = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -490,6 +605,20 @@ class BuildingManagerApp(App):
         if not os.path.isfile(font_path):
             raise FileNotFoundError("فونت فارسی برنامه پیدا نشد: " + font_path)
         LabelBase.register(name="Persian", fn_regular=font_path, fn_bold=font_path, fn_italic=font_path, fn_bolditalic=font_path)
+        try:
+            import json
+            settings_path = os.path.join(self.user_data_dir, "settings.json")
+            if os.path.isfile(settings_path):
+                with open(settings_path, "r", encoding="utf-8") as stream:
+                    saved = json.load(stream).get("font", "Vazirmatn (پیش‌فرض)")
+                if saved != "Vazirmatn (پیش‌فرض)":
+                    saved_path = self.find_windows_font(saved)
+                    if saved_path:
+                        LabelBase.register(name=saved, fn_regular=saved_path, fn_bold=saved_path, fn_italic=saved_path, fn_bolditalic=saved_path)
+                        self.selected_font = saved
+                        self.selected_font_label = saved
+        except Exception:
+            pass
         dbpath=os.path.join(self.user_data_dir,DB_NAME)
         self.db=DB(dbpath)
         Builder.load_string(KV)
@@ -498,7 +627,8 @@ class BuildingManagerApp(App):
         receipt=TransactionScreen(name="receipt",kind="receipt",heading="ثبت وصولی")
         expense=TransactionScreen(name="expense",kind="expense",heading="ثبت هزینه")
         reports=ReportsScreen(name="reports")
-        for s in [home,units,charge,receipt,expense,reports]: sm.add_widget(s)
+        settings=SettingsScreen(name="settings")
+        for s in [home,units,charge,receipt,expense,reports,settings]: sm.add_widget(s)
         sm.db=self.db
         Clock.schedule_once(lambda dt: home.refresh(),.2)
         return sm
