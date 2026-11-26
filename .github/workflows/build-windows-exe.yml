@@ -1,4 +1,4 @@
-name: Build Windows EXE
+name: Build Windows 7 EXE
 
 on:
   workflow_dispatch:
@@ -7,55 +7,63 @@ on:
     paths:
       - 'main.py'
       - 'fonts/Vazirmatn-Regular.ttf.b64'
-      - 'requirements.txt'
       - '.github/workflows/build-windows-exe.yml'
 
 jobs:
   build-windows:
-    runs-on: windows-latest
-    timeout-minutes: 45
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            python-arch: x64
+          - arch: x86
+            python-arch: x86
+    timeout-minutes: 60
     env:
-      # Use ANGLE's Direct3D-backed OpenGL implementation on headless CI.
       KIVY_GL_BACKEND: angle_sdl2
+      KIVY_WINDOW: sdl2
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.8.10 (Windows 7 compatible)
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: '3.8.10'
+          architecture: ${{ matrix.python-arch }}
 
-      - name: Install dependencies
+      - name: Install Windows 7 compatible build dependencies
+        shell: pwsh
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install "kivy[base]==2.3.1" openpyxl reportlab pyinstaller
+          python -m pip install --upgrade "pip<25"
+          python -m pip install "kivy[base]==2.1.0" "openpyxl==3.1.5" "reportlab==3.6.13" "pyinstaller==5.13.2"
 
-      - name: Verify Kivy graphics backend
-        run: |
-          python -c "import os; print('KIVY_GL_BACKEND=', os.environ.get('KIVY_GL_BACKEND')); import kivy; print('Kivy', kivy.__version__)"
-
-      - name: Restore Persian font
+      - name: Restore bundled Persian fallback font
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path fonts | Out-Null
           $font = [Convert]::FromBase64String((Get-Content fonts/Vazirmatn-Regular.ttf.b64 -Raw))
           [IO.File]::WriteAllBytes('fonts/Vazirmatn-Regular.ttf', $font)
 
-      - name: Build Windows application
-        run: |
-          pyinstaller --noconfirm --clean --windowed --onedir --name BuildingManager --add-data "fonts/Vazirmatn-Regular.ttf;fonts" --collect-data kivy --collect-binaries kivy --hidden-import kivy.core.window._window_sdl2 --hidden-import kivy.core.text --hidden-import kivy.core.text.text_sdl2 --hidden-import openpyxl --hidden-import reportlab main.py
-
-      - name: Package application
+      - name: Verify architecture and dependency versions
         shell: pwsh
         run: |
-          Compress-Archive -Path dist/BuildingManager -DestinationPath BuildingManager-Windows.zip -Force
+          python -c "import struct,sys,kivy; print('Python:',sys.version); print('Bits:',struct.calcsize('P')*8); print('Kivy:',kivy.__version__)"
+          if ((python -c "import struct; print(struct.calcsize('P')*8)") -ne ${{ matrix.arch == 'x86' && '32' || '64' }}) { throw "Unexpected Python architecture" }
 
-      - name: Upload Windows application
+      - name: Build Windows 7 application
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm --clean --windowed --onedir --name BuildingManager --add-data "fonts/Vazirmatn-Regular.ttf;fonts" --collect-data kivy --collect-binaries kivy --hidden-import kivy.core.window._window_sdl2 --hidden-import kivy.core.text --hidden-import kivy.core.text.text_sdl2 --hidden-import openpyxl --hidden-import reportlab main.py
+          if (!(Test-Path "dist/BuildingManager/BuildingManager.exe")) { throw "EXE was not created" }
+          Compress-Archive -Path dist/BuildingManager -DestinationPath "BuildingManager-Windows7-${{ matrix.arch }}.zip" -Force
+
+      - name: Upload Windows 7 application
         uses: actions/upload-artifact@v4
         with:
-          name: building-manager-windows
-          path: BuildingManager-Windows.zip
+          name: BuildingManager-Windows7-${{ matrix.arch }}
+          path: BuildingManager-Windows7-${{ matrix.arch }}.zip
           if-no-files-found: error
           retention-days: 14
