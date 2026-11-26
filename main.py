@@ -575,8 +575,8 @@ class BuildingManagerApp(App):
             "B Traffic": ("B Traffic", "BTraffic.ttf", "B Traffic (TrueType)")
         }
         keys = [
-            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts"),
-            (winreg.HKEY_CURRENT_USER, r"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts")
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\\Windows NT\CurrentVersion\Fonts"),
+            (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\\Windows NT\CurrentVersion\Fonts")
         ]
         names = candidates.get(family, ())
         for hive, key in keys:
@@ -586,12 +586,12 @@ class BuildingManagerApp(App):
                     for index in range(count):
                         name, value, _ = winreg.EnumValue(handle, index)
                         if any(token.lower() in name.lower() for token in names):
-                            path = value if os.path.isabs(value) else os.path.join(os.environ.get("WINDIR", r"C:\\Windows"), "Fonts", value)
+                            path = value if os.path.isabs(value) else os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts", value)
                             if os.path.isfile(path):
                                 return path
             except OSError:
                 continue
-        fonts_dir = os.path.join(os.environ.get("WINDIR", r"C:\\Windows"), "Fonts")
+        fonts_dir = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts")
         for filename in names:
             path = os.path.join(fonts_dir, filename)
             if os.path.isfile(path):
