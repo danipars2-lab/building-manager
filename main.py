@@ -337,7 +337,7 @@ KV = r"""
         Spinner:
             id: font_picker
             text: app.selected_font_label
-            values: ["Vazirmatn (پیش‌فرض)", "B Nazanin", "B Yagut", "B Koodak", "B Traffic"]
+            values: ["B Nazanin (پیش‌فرض)", "Vazirmatn", "B Yagut", "B Koodak", "B Traffic"]
             size_hint_y: None
             height: dp(48)
             on_text: root.choose_font(self.text)
@@ -530,10 +530,10 @@ class SettingsScreen(Screen):
     def choose_font(self, label):
         app = App.get_running_app()
         try:
-            if label == "Vazirmatn (پیش‌فرض)":
+            if label == "Vazirmatn":
                 app.selected_font = "Persian"
                 app.selected_font_label = label
-                self.font_status = "فونت پیش‌فرض فعال شد."
+                self.font_status = "فونت وزیرمتن فعال شد."
                 app.save_font_preference(label)
                 return
             path = app.find_windows_font(label)
@@ -553,7 +553,7 @@ class RootManager(ScreenManager):
 
 class BuildingManagerApp(App):
     selected_font = StringProperty("Persian")
-    selected_font_label = StringProperty("Vazirmatn (پیش‌فرض)")
+    selected_font_label = StringProperty("B Nazanin (پیش‌فرض)")
 
     def save_font_preference(self, label):
         try:
@@ -605,13 +605,27 @@ class BuildingManagerApp(App):
         if not os.path.isfile(font_path):
             raise FileNotFoundError("فونت فارسی برنامه پیدا نشد: " + font_path)
         LabelBase.register(name="Persian", fn_regular=font_path, fn_bold=font_path, fn_italic=font_path, fn_bolditalic=font_path)
+        # B Nazanin is the default; use the bundled Persian font only as a fallback.
+        default_nazanin = self.find_windows_font("B Nazanin")
+        if default_nazanin:
+            LabelBase.register(name="B Nazanin", fn_regular=default_nazanin, fn_bold=default_nazanin, fn_italic=default_nazanin, fn_bolditalic=default_nazanin)
+            self.selected_font = "B Nazanin"
+            self.selected_font_label = "B Nazanin (پیش‌فرض)"
+        else:
+            self.selected_font = "Persian"
+            self.selected_font_label = "Vazirmatn"
         try:
             import json
             settings_path = os.path.join(self.user_data_dir, "settings.json")
             if os.path.isfile(settings_path):
                 with open(settings_path, "r", encoding="utf-8") as stream:
-                    saved = json.load(stream).get("font", "Vazirmatn (پیش‌فرض)")
-                if saved != "Vazirmatn (پیش‌فرض)":
+                    saved = json.load(stream).get("font", "B Nazanin")
+                if saved == "B Nazanin (پیش‌فرض)":
+                    saved = "B Nazanin"
+                if saved == "Vazirmatn":
+                    self.selected_font = "Persian"
+                    self.selected_font_label = "Vazirmatn"
+                elif saved and saved != "B Nazanin":
                     saved_path = self.find_windows_font(saved)
                     if saved_path:
                         LabelBase.register(name=saved, fn_regular=saved_path, fn_bold=saved_path, fn_italic=saved_path, fn_bolditalic=saved_path)
