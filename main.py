@@ -575,8 +575,8 @@ class BuildingManagerApp(App):
             "B Traffic": ("B Traffic", "BTraffic.ttf", "B Traffic (TrueType)")
         }
         keys = [
-            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\\Windows NT\CurrentVersion\Fonts"),
-            (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\\Windows NT\CurrentVersion\Fonts")
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"),
+            (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts")
         ]
         names = candidates.get(family, ())
         for hive, key in keys:
